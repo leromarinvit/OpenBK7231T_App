@@ -370,8 +370,10 @@ typedef struct mainConfig_s {
 	// 0x000005A0
 	char ping_host[64];
 	char initCommandLine[512];
-} mainConfig_t; // size 0x000007E0 (2016 decimal)
+} __attribute__((packed)) mainConfig_t; // size 0x000007E0 (2016 decimal)
 #define MAGIC_CONFIG_SIZE		2016
+
+_Static_assert(sizeof(mainConfig_t) == MAGIC_CONFIG_SIZE, "mainConfig_t has unexpected size");
 
 extern mainConfig_t g_cfg;
 
