@@ -303,6 +303,46 @@ void CFG_SetWiFiPass(const char *s) {
 		g_cfg_pendingChanges++;
 	}
 }
+in_addr_t CFG_GetLocalIP() {
+	return g_cfg.local_ip;
+}
+in_addr_t CFG_GetGwIP() {
+	return g_cfg.gw_ip;
+}
+in_addr_t CFG_GetDnsIP() {
+	return g_cfg.dns_ip;
+}
+byte CFG_GetNetmask() {
+	return g_cfg.netmask;
+}
+void CFG_SetLocalIP(in_addr_t addr) {
+	if (addr != CFG_GetLocalIP()) {
+		// mark as dirty (value has changed)
+		g_cfg_pendingChanges++;
+	}
+	g_cfg.local_ip = addr;
+}
+void CFG_SetGwIP(in_addr_t addr) {
+	if (addr != CFG_GetGwIP()) {
+		// mark as dirty (value has changed)
+		g_cfg_pendingChanges++;
+	}
+	g_cfg.gw_ip = addr;
+}
+void CFG_SetDnsIP(in_addr_t addr) {
+	if (addr != CFG_GetDnsIP()) {
+		// mark as dirty (value has changed)
+		g_cfg_pendingChanges++;
+	}
+	g_cfg.dns_ip = addr;
+}
+void CFG_SetNetmask(byte netmask) {
+	if (netmask != CFG_GetNetmask()) {
+		// mark as dirty (value has changed)
+		g_cfg_pendingChanges++;
+	}
+	g_cfg.netmask = netmask;
+}
 const char *CFG_GetMQTTHost() {
 	return g_cfg.mqtt_host;
 }

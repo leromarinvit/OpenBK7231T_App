@@ -6,9 +6,15 @@
 #include "cmd_local.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
+#include "../hal/hal_wifi.h"
 #ifdef ENABLE_LITTLEFS
 	#include "../littlefs/our_lfs.h"
 #endif
+
+#define IP_LOCAL '1'
+#define IP_GW    '2'
+#define IP_MASK  '3'
+#define IP_DNS   '4'
 
 
 
@@ -335,6 +341,106 @@ static commandResult_t cmnd_Password1(const void * context, const char *cmd, con
 	CFG_SetWiFiPass(Tokenizer_GetArg(0));
 	return CMD_RES_OK;
 }
+static char *get_ipaddr(char which, char *buf, size_t len) {
+	in_addr_t addr;
+
+	switch (which) {
+	case IP_LOCAL:
+		addr = CFG_GetLocalIP();
+		break;
+	case IP_GW:
+		addr = CFG_GetGwIP();
+		break;
+	case IP_MASK:
+		addr = htonl(~0 << (sizeof addr * 8 - CFG_GetNetmask()));
+		break;
+	case IP_DNS:
+		addr = CFG_GetDnsIP();
+		break;
+	default:
+		return NULL;
+	}
+
+	return inet_ntoa_r(addr, buf, len);
+}
+static commandResult_t cmnd_IPAddress(const void * context, const char *cmd, const char *args, int cmdFlags) {
+	const int cmdlen = sizeof "ipaddress" - 1;
+	char which = 'x';
+	char ip[IP4ADDR_STRLEN_MAX];
+	in_addr_t addr;
+	byte mask = 0;
+
+	if (strlen(cmd) > cmdlen) {
+		which = cmd[cmdlen];
+	} else {
+		char mask[IP4ADDR_STRLEN_MAX];
+		char gw[IP4ADDR_STRLEN_MAX];
+		char dns[IP4ADDR_STRLEN_MAX];
+
+		get_ipaddr(IP_LOCAL, ip, sizeof ip);
+		get_ipaddr(IP_GW, gw, sizeof gw);
+		get_ipaddr(IP_MASK, mask, sizeof mask);
+		get_ipaddr(IP_DNS, dns, sizeof dns);
+
+		ADDLOG_INFO(LOG_FEATURE_CMD, "tasCmnd IPADDRESS: ip=%s (%s) netmask=%s gw=%s dns=%s", ip, HAL_GetMyIPString(), mask, gw, dns);
+
+		return CMD_RES_OK;
+	}
+
+	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES);
+
+	switch (Tokenizer_GetArgsCount()) {
+	case 1:
+		if (!inet_aton(Tokenizer_GetArg(0), &addr)) {
+			ADDLOG_ERROR(LOG_FEATURE_CMD, "tasCmnd IPADDRESS: bad address");
+			return CMD_RES_BAD_ARGUMENT;
+		}
+		switch (which) {
+		case IP_LOCAL:
+			CFG_SetLocalIP(addr);
+			break;
+		case IP_GW:
+			CFG_SetGwIP(addr);
+			break;
+		case IP_MASK:
+			addr = ntohl(addr);
+			while (addr & (1 << (sizeof addr * 8 - 1))) {
+				addr <<= 1;
+				mask++;
+			}
+			if (addr || mask == sizeof addr * 8) {
+				ADDLOG_ERROR(LOG_FEATURE_CMD, "tasCmnd IPADDRESS: bad netmask addr=%x mask=%u", addr, mask);
+				return CMD_RES_BAD_ARGUMENT;
+			}
+			CFG_SetNetmask(mask);
+			break;
+		case IP_DNS:
+			CFG_SetDnsIP(addr);
+			break;
+		default:
+			ADDLOG_ERROR(LOG_FEATURE_CMD, "tasCmnd IPADDRESS: no such address: '%c", which);
+			return CMD_RES_ERROR;
+		}
+		// fall-through
+	case 0:
+		if (NULL == get_ipaddr(which, ip, sizeof ip)) {
+			ADDLOG_ERROR(LOG_FEATURE_CMD, "tasCmnd IPADDRESS: no such address: '%c'", which);
+			return CMD_RES_ERROR;
+		}
+
+		if (which == IP_LOCAL) {
+			ADDLOG_INFO(LOG_FEATURE_CMD, "tasCmnd IPADDRESS: ipaddress%c: %s (%s)", which, ip, HAL_GetMyIPString());
+		} else {
+			ADDLOG_INFO(LOG_FEATURE_CMD, "tasCmnd IPADDRESS: ipaddress%c: %s", which, ip);
+		}
+		return CMD_RES_OK;
+	default:
+		ADDLOG_ERROR(LOG_FEATURE_CMD, "tasCmnd IPADDRESS: too many arguments");
+		return CMD_RES_BAD_ARGUMENT;
+	}
+
+	return CMD_RES_OK;
+}
 static commandResult_t cmnd_MqttHost(const void * context, const char *cmd, const char *args, int cmdFlags) {
 	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES);
 	// following check must be done after 'Tokenizer_TokenizeString',
@@ -419,6 +525,11 @@ int taslike_commands_init(){
 	//cmddetail:"fn":"cmnd_Password1","file":"cmnds/cmd_tasmota.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("Password1", cmnd_Password1, NULL);
+	//cmddetail:{"name":"ipaddressN","args":"[IP address]",
+	//cmddetail:"descr":"Sets WiFi IP/gateway/mask/DNS. Command keeps Tasmota syntax",
+	//cmddetail:"fn":"cmnd_IPAddress","file":"cmnds/cmd_tasmota.c","requires":"",
+	//cmddetail:"examples":""}
+	CMD_RegisterCommand("ipaddress", cmnd_IPAddress, NULL);
 	//cmddetail:{"name":"MqttHost","args":"[ValueString]",
 	//cmddetail:"descr":"Sets the MQTT host. Command keeps Tasmota syntax",
 	//cmddetail:"fn":"cmnd_MqttHost","file":"cmnds/cmd_tasmota.c","requires":"",

@@ -553,11 +553,22 @@ void Main_OnEverySecond()
 		if(0 == g_connectToWiFi && g_bHasWiFiConnected == 0) 
         {
 			const char *wifi_ssid, *wifi_pass;
+			char dhcp_mode = DHCP_CLIENT;
+			in_addr_t ip, mask, gw, dns;
+
+			if (INADDR_ANY != CFG_GetLocalIP())
+			{
+				dhcp_mode = DHCP_DISABLE;
+			}
 
 			g_bOpenAccessPointMode = 0;
 			wifi_ssid = CFG_GetWiFiSSID();
 			wifi_pass = CFG_GetWiFiPass();
-			HAL_ConnectToWiFi(wifi_ssid,wifi_pass);
+			ip = CFG_GetLocalIP();
+			mask = CFG_GetNetmask();
+			gw = CFG_GetGwIP();
+			dns = CFG_GetDnsIP();
+			HAL_ConnectToWiFi(wifi_ssid, wifi_pass, dhcp_mode, ip, mask, gw, dns);
 			// register function to get callbacks about wifi changes.
 			HAL_WiFi_SetupStatusCallback(Main_OnWiFiStatusChange);
 			ADDLOGF_DEBUG("Registered for wifi changes\r\n");

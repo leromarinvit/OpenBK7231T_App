@@ -228,7 +228,7 @@ void HAL_WiFi_SetupStatusCallback(void (*cb)(int code))
 	bk_wlan_status_register_cb(wl_status);
 }
 
-void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key)
+void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, char dhcp_mode, in_addr_t ip, in_addr_t netmask, in_addr_t gw, in_addr_t dns)
 {
 	g_bOpenAccessPointMode = 0;
 
@@ -240,8 +240,13 @@ void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key)
 	os_strcpy((char*)network_cfg.wifi_key, connect_key);
 
 	network_cfg.wifi_mode = STATION;
-	network_cfg.dhcp_mode = DHCP_CLIENT;
 	network_cfg.wifi_retry_interval = 100;
+	network_cfg.dhcp_mode = dhcp_mode;
+
+	inet_ntoa_r(ip, network_cfg.local_ip_addr, sizeof network_cfg.local_ip_addr);
+	inet_ntoa_r(netmask, network_cfg.net_mask, sizeof network_cfg.net_mask);
+	inet_ntoa_r(gw, network_cfg.gateway_ip_addr, sizeof network_cfg.gateway_ip_addr);
+	inet_ntoa_r(dns, network_cfg.dns_server_ip_addr, sizeof network_cfg.dns_server_ip_addr);
 
 	ADDLOGF_INFO("ssid:%s key:%s\r\n", network_cfg.wifi_ssid, network_cfg.wifi_key);
 

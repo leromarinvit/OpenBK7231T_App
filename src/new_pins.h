@@ -352,10 +352,14 @@ typedef struct mainConfig_s {
 	// offset 0x000004BC
 	unsigned long LFS_Size; // szie of LFS volume.  it's aligned against the end of OTA
 #if PLATFORM_W800
-    byte unusedSectorAB[71];
+    byte unusedSectorAB[58];
 #else    
-	byte unusedSectorAB[119];
+	byte unusedSectorAB[106];
 #endif    
+	byte netmask;
+	in_addr_t local_ip;
+	in_addr_t gw_ip;
+	in_addr_t dns_ip;
     ledRemap_t ledRemap;
 	led_corr_t led_corr;
 	// alternate topic name for receiving MQTT commands
