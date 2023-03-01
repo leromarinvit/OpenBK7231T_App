@@ -1,4 +1,4 @@
-#include <arpa/inet.h>
+#include <lwip/inet.h>
 
 #define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MACSTR "%02x:%02x:%02x:%02x:%02x:%02x "
