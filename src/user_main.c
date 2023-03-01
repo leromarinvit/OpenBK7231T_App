@@ -338,16 +338,19 @@ void Main_ConnectToWiFiNow() {
 	char dhcp_mode = DHCP_CLIENT;
 	in_addr_t ip, mask, gw, dns;
 
-	if (INADDR_ANY != CFG_GetLocalIP())
-	{
-		dhcp_mode = DHCP_DISABLE;
-	}
 	g_bOpenAccessPointMode = 0;
 	wifi_ssid = CFG_GetWiFiSSID();
 	wifi_pass = CFG_GetWiFiPass();
+	ip = CFG_GetLocalIP();
 	mask = CFG_GetNetmask();
 	gw = CFG_GetGwIP();
 	dns = CFG_GetDnsIP();
+
+	if (ip != INADDR_ANY)
+	{
+		dhcp_mode = DHCP_DISABLE;
+	}
+
 	HAL_ConnectToWiFi(wifi_ssid, wifi_pass, dhcp_mode, ip, mask, gw, dns);
 	// register function to get callbacks about wifi changes.
 	HAL_WiFi_SetupStatusCallback(Main_OnWiFiStatusChange);
