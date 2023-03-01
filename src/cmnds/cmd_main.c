@@ -8,9 +8,13 @@
 #include "../driver/drv_uart.h"
 #include "../driver/drv_public.h"
 #include "../hal/hal_adc.h"
+#include "../hal/hal_flashVars.h"
 
 #ifdef ENABLE_LITTLEFS
 #include "../littlefs/our_lfs.h"
+#endif
+#ifdef PLATFORM_BL602
+#include <wifi_mgmr_ext.h>
 #endif
 
 #define HASH_SIZE 128
@@ -43,7 +47,7 @@ static commandResult_t CMD_PowerSave(const void* context, const char* cmd, const
 	if (Tokenizer_GetArgsCount() > 0) {
 		bOn = Tokenizer_GetArgInteger(0);
 	}
-	ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_PowerSave: will set to %i",bOn);
+	ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_PowerSave: will set to %i", bOn);
 
 #ifdef PLATFORM_BEKEN
 	extern int bk_wlan_power_save_set_level(BK_PS_LEVEL level);
@@ -60,9 +64,17 @@ static commandResult_t CMD_PowerSave(const void* context, const char* cmd, const
 	else {
 		tls_wifi_set_psflag(0, 0);	//Disable powersave but don't save to flash
 	}
-#endif
+#elif defined(PLATFORM_BL602)
+	if (bOn) {
+		wifi_mgmr_sta_powersaving(2);
+	}
+	else {
+		wifi_mgmr_sta_powersaving(0);
+	}
+#else
+	ADDLOG_INFO(LOG_FEATURE_CMD, "PowerSave is not implemented on this platform");
+#endif    
 	g_powersave = bOn;
-
 	return CMD_RES_OK;
 }
 static commandResult_t CMD_DeepSleep(const void* context, const char* cmd, const char* args, int cmdFlags) {
@@ -92,70 +104,6 @@ static commandResult_t CMD_DeepSleep(const void* context, const char* cmd, const
 
 	return CMD_RES_OK;
 }
-static commandResult_t CMD_BATT_Meas(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	//this command has only been tested on CBU
-	float batt_value, batt_perc, batt_ref, batt_res;
-	int g_pin_adc = 0, channel_adc = 0, channel_rel = 0, g_pin_rel = 0;
-	ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_BATT_Meas : Measure Battery volt en perc");
-	Tokenizer_TokenizeString(args, 0);
-
-	if (Tokenizer_GetArgsCount() < 2) {
-		ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_BATT_Meas : Not enough arguments.(minbatt,maxbatt)");
-		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
-	}
-
-	int minbatt = Tokenizer_GetArgInteger(0);
-	int maxbatt = Tokenizer_GetArgInteger(1);
-	// apply default ratio for a vref of 2,400 from BK7231N SDK
-	float vref = 2400;
-	if (Tokenizer_GetArgsCount() > 2) {
-		vref = Tokenizer_GetArgInteger(2);
-	}
-	int adcbits = 4096;
-	if (Tokenizer_GetArgsCount() > 3) {
-		adcbits = Tokenizer_GetArgInteger(3);
-	}
-	int v_divider = 2;
-	if (Tokenizer_GetArgsCount() > 4) {
-		v_divider = Tokenizer_GetArgInteger(4);
-	}
-	g_pin_adc = PIN_FindPinIndexForRole(IOR_ADC, g_pin_adc);
-	// if divider equal to 1 then no need for relay activation
-	if (v_divider > 1) {
-		g_pin_rel = PIN_FindPinIndexForRole(IOR_Relay, g_pin_rel);
-		channel_rel = g_cfg.pins.channels[g_pin_rel];
-	}
-	HAL_ADC_Init(g_pin_adc);
-	batt_value = HAL_ADC_Read(g_pin_adc);
-	if (batt_value < 1024) {
-		ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_BATT_Meas : ADC Value low device not on battery");
-		return CMD_RES_ERROR;
-	}
-	if (v_divider > 1) {
-		CHANNEL_Set(channel_rel, 1, 0);
-	}
-	batt_value = HAL_ADC_Read(g_pin_adc);
-	ADDLOG_DEBUG(LOG_FEATURE_CMD, "CMD_BATT_Meas : ADC binary Measurement : %f and channel %i", batt_value, channel_adc);
-	if (v_divider > 1) {
-		CHANNEL_Set(channel_rel, 0, 0);
-	}
-	// batt_value = batt_value / vref / 12bits value should be 10 un doc ... but on CBU is 12 ....
-	vref = vref / adcbits;
-	batt_value = batt_value * vref;
-	// multiply by 2 cause ADC is measured after the Voltage Divider
-	batt_value = batt_value * v_divider;
-	batt_ref = maxbatt - minbatt;
-	batt_res = batt_value - minbatt;
-	ADDLOG_DEBUG(LOG_FEATURE_CMD, "CMD_BATT_Meas : Ref battery: %f, rest battery %f", batt_ref, batt_res);
-	batt_perc = (batt_res / batt_ref) * 100;
-	extern void MQTT_PublishMain_StringInt();
-	MQTT_PublishMain_StringInt("voltage", (int)batt_value);
-	MQTT_PublishMain_StringInt("battery", (int)batt_perc);
-	ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_BATT_Meas : battery voltage : %f and percentage %f%%", batt_value, batt_perc);
-
-	return CMD_RES_OK;
-}
-
 
 static commandResult_t CMD_ScheduleHADiscovery(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	int delay;
@@ -267,10 +215,18 @@ static commandResult_t CMD_ClearConfig(const void* context, const char* cmd, con
 
 	return CMD_RES_OK;
 }
+// setChannel 1 123
+// echo First channel is $CH1 and this is the test
+// will print echo First channel is 123 and this is the test
 static commandResult_t CMD_Echo(const void* context, const char* cmd, const char* args, int cmdFlags) {
 
-
+#if 0
 	ADDLOG_INFO(LOG_FEATURE_CMD, args);
+#else
+	// we want $CH40 etc expanded
+	Tokenizer_TokenizeString(args, TOKENIZER_ALTERNATE_EXPAND_AT_START | TOKENIZER_FORCE_SINGLE_ARGUMENT_MODE);
+	ADDLOG_INFO(LOG_FEATURE_CMD, Tokenizer_GetArgFrom(0));
+#endif
 
 	return CMD_RES_OK;
 }
@@ -293,6 +249,24 @@ static commandResult_t CMD_SetStartValue(const void* context, const char* cmd, c
 
 	return CMD_RES_OK;
 }
+static commandResult_t CMD_OpenAP(const void* context, const char* cmd, const char* args, int cmdFlags) {
+
+	g_openAP = 5;
+
+	return CMD_RES_OK;
+}
+static commandResult_t CMD_SafeMode(const void* context, const char* cmd, const char* args, int cmdFlags) {
+	int i;
+
+	// simulate enough boots so the reboot will go into safe mode
+	for (i = 0; i <= RESTARTS_REQUIRED_FOR_SAFE_MODE; i++) {
+		HAL_FlashVars_IncreaseBootCount();
+	}
+	RESET_ScheduleModuleReset(3);
+
+	return CMD_RES_OK;
+}
+
 
 
 int cmd_uartInitIndex = 0;
@@ -347,11 +321,11 @@ void CMD_RunUartCmndIfRequired() {
 		}
 	}
 #endif
-}
+	}
 
 // run an aliased command
-static commandResult_t runcmd(const void * context, const char *cmd, const char *args, int cmdFlags) {
-	char *c = (char *)context;
+static commandResult_t runcmd(const void* context, const char* cmd, const char* args, int cmdFlags) {
+	char* c = (char*)context;
 	//   char *p = c;
 
 	//   while (*p && !isWhiteSpace(*p)) {
@@ -362,12 +336,12 @@ static commandResult_t runcmd(const void * context, const char *cmd, const char 
 }
 
 // run an aliased command
-static commandResult_t CMD_CreateAliasForCommand(const void * context, const char *cmd, const char *args, int cmdFlags) {
-	const char *alias;
-	const char *ocmd;
-	char *cmdMem;
-	char *aliasMem;
-	command_t *existing;
+static commandResult_t CMD_CreateAliasForCommand(const void* context, const char* cmd, const char* args, int cmdFlags) {
+	const char* alias;
+	const char* ocmd;
+	char* cmdMem;
+	char* aliasMem;
+	command_t* existing;
 
 	Tokenizer_TokenizeString(args, 0);
 	// following check must be done after 'Tokenizer_TokenizeString',
@@ -406,7 +380,7 @@ void CMD_Init_Early() {
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("alias", CMD_CreateAliasForCommand, NULL);
 	//cmddetail:{"name":"echo","args":"[Message]",
-	//cmddetail:"descr":"Sends given message back to console.",
+	//cmddetail:"descr":"Sends given message back to console. This command expands variables, so writing $CH12 will print value of channel 12, etc. Remember that you can also use special channel indices to access persistant flash variables and to access LED variables like dimmer, etc.",
 	//cmddetail:"fn":"CMD_Echo","file":"cmnds/cmd_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("echo", CMD_Echo, NULL);
@@ -440,11 +414,6 @@ void CMD_Init_Early() {
 	//cmddetail:"fn":"CMD_PowerSave","file":"cmnds/cmd_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("PowerSave", CMD_PowerSave, NULL);
-	//cmddetail:{"name":"Battery_measure","args":"[int][int][float][int][int]",
-	//cmddetail:"descr":"measure battery based on ADC args minbatt and maxbatt in mv. optional Vref(default 2403), ADC bits(4096) and  V_divider(2) ",
-	//cmddetail:"fn":"CMD_BATT_Meas","file":"cmnds/cmd_main.c","requires":"",
-	//cmddetail:"examples":"Battery_measure 1500 3000 2403 4096 2"}
-	CMD_RegisterCommand("Battery_measure", CMD_BATT_Meas, NULL);
 	//cmddetail:{"name":"simonirtest","args":"",
 	//cmddetail:"descr":"Simons Special Test",
 	//cmddetail:"fn":"CMD_SimonTest","file":"cmnds/cmd_main.c","requires":"",
@@ -480,6 +449,16 @@ void CMD_Init_Early() {
 	//cmddetail:"fn":"CMD_SetStartValue","file":"cmnds/cmd_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("SetStartValue", CMD_SetStartValue, NULL);
+	//cmddetail:{"name":"OpenAP","args":"",
+	//cmddetail:"descr":"Temporarily disconnects from programmed WiFi network and opens Access Point",
+	//cmddetail:"fn":"CMD_OpenAP","file":"cmnds/cmd_main.c","requires":"",
+	//cmddetail:"examples":""}
+	CMD_RegisterCommand("OpenAP", CMD_OpenAP, NULL);
+	//cmddetail:{"name":"SafeMode","args":"",
+	//cmddetail:"descr":"Forces device reboot into safe mode (open ap with disabled drivers)",
+	//cmddetail:"fn":"CMD_SafeMode","file":"cmnds/cmd_main.c","requires":"",
+	//cmddetail:"examples":""}
+	CMD_RegisterCommand("SafeMode", CMD_SafeMode, NULL);
 
 #if (defined WINDOWS) || (defined PLATFORM_BEKEN)
 	CMD_InitScripting();

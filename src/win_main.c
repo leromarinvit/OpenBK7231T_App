@@ -13,6 +13,7 @@
 #include "driver\drv_public.h"
 #include "cmnds\cmd_public.h"
 #include "httpserver\new_http.h"
+#include "hal\hal_flashVars.h"
 #include "new_pins.h"
 #include <timeapi.h>
 
@@ -109,13 +110,14 @@ void SIM_Hack_ClearSimulatedPinRoles();
 void SIM_ClearOBK() {
 	if (bObkStarted) {
 		DRV_ShutdownAllDrivers();
-		LOG_DeInit();
 		release_lfs();
 		SIM_Hack_ClearSimulatedPinRoles();
 		WIN_ResetMQTT();
 		CMD_ExecuteCommand("clearAll", 0);
 		CMD_ExecuteCommand("led_expoMode", 0);
 		Main_Init();
+		// LOG deinit after main init so commands will be re-added
+		LOG_DeInit();
 	}
 }
 void SIM_DoFreshOBKBoot() {
@@ -123,6 +125,8 @@ void SIM_DoFreshOBKBoot() {
 	Main_Init();
 }
 void Win_DoUnitTests() {
+	Test_CFG_Via_HTTP();
+	Test_Commands_Calendar();
 	Test_Commands_Generic();
 	Test_Demo_SimpleShuttersScript();
 	Test_Role_ToggleAll();
@@ -190,7 +194,7 @@ int g_bDoingUnitTestsNow = 0;
 #include "sim/sim_public.h"
 int __cdecl main(int argc, char **argv)
 {
-	bool bWantsUnitTests = 1;
+	bool bWantsUnitTests = 0;
 
 	if (argc > 1) {
 		int value;
@@ -241,6 +245,10 @@ int __cdecl main(int argc, char **argv)
 	printf("sizeof(long double) = %d\n", (int)sizeof(long double));
 	printf("sizeof(led_corr_t) = %d\n", (int)sizeof(led_corr_t));
 	
+	if (sizeof(FLASH_VARS_STRUCTURE) != MAGIC_FLASHVARS_SIZE) {
+		printf("sizeof(FLASH_VARS_STRUCTURE) != MAGIC_FLASHVARS_SIZE!: %i\n", sizeof(FLASH_VARS_STRUCTURE));
+		system("pause");
+	}
 	if (sizeof(ledRemap_t) != MAGIC_LED_REMAP_SIZE) {
 		printf("sizeof(ledRemap_t) != MAGIC_LED_REMAP_SIZE!: %i\n", sizeof(ledRemap_t));
 		system("pause");
@@ -292,7 +300,7 @@ int __cdecl main(int argc, char **argv)
 
 
 	SIM_CreateWindow(argc, argv);
-#if 0
+#if 1
 	CMD_ExecuteCommand("MQTTHost 192.168.0.113", 0);
 	CMD_ExecuteCommand("MqttPassword ma1oovoo0pooTie7koa8Eiwae9vohth1vool8ekaej8Voohi7beif5uMuph9Diex", 0);
 	CMD_ExecuteCommand("MqttClient WindowsOBK", 0);

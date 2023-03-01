@@ -27,14 +27,13 @@ Do not add anything here, as it will overwritten with next rebuild.
 | clearAllHandlers |  | This clears all added event handlers |
 | aliasMem |  | Internal usage only. See docs for 'alias' command. |
 | alias | [Alias][Command with spaces] | add an aliased command, so a command with spaces can be called with a short, nospaced alias |
-| echo | [Message] | Sends given message back to console. |
+| echo | [Message] | Sends given message back to console. This command expands variables, so writing $CH12 will print value of channel 12, etc. Remember that you can also use special channel indices to access persistant flash variables and to access LED variables like dimmer, etc. |
 | restart |  | Reboots the module |
 | reboot |  | Same as restart. Needed for bkWriter 1.60 which sends 'reboot' cmd before trying to get bus |
 | clearConfig |  | Clears all config, including WiFi data |
 | clearAll |  | Clears config and all remaining features, like runtime scripts, events, etc |
 | DeepSleep | [Seconds] | Starts deep sleep for given amount of seconds. |
 | PowerSave | [Optional 1 or 0, by default 1 is assumed] | Enables dynamic power saving mode on BK and W600. You can also disable power saving with PowerSave 0. |
-| Battery_measure | [int][int][float][int][int] | measure battery based on ADC args minbatt and maxbatt in mv. optional Vref(default 2403), ADC bits(4096) and  V_divider(2) <br/>e.g.:Battery_measure 1500 3000 2403 4096 2 |
 | simonirtest |  | Simons Special Test |
 | if | [Condition]['then'][CommandA]['else'][CommandB] | Executed a conditional. Condition should be single line. You must always use 'then' after condition. 'else' is optional. Use aliases or quotes for commands with spaces |
 | ota_http | [HTTP_URL] | Starts the firmware update procedure, the argument should be a reachable HTTP server file. You can easily setup HTTP server with Xampp, or Visual Code, or Python, etc. Make sure you are using OTA file for a correct platform (getting N platform RBL on T will brick device, etc etc) |
@@ -47,6 +46,7 @@ Do not add anything here, as it will overwritten with next rebuild.
 | add_dimmer | [Value][AddMode] | Adds a given value to current LED dimmer. AddMode 0 just adds a value (with a clamp to [0,100]), AddMode 1 will wrap around values (going under 0 goes to 100, going over 100 goes to 0), AddMode 2 will ping-pong value (going to 100 starts going back from 100 to 0, and again, going to 0 starts going up). |
 | led_enableAll | [1or0orToggle] | Power on/off LED but remember the RGB(CW) values |
 | led_basecolor_rgb | [HexValue] | Puts the LED driver in RGB mode and sets given color. |
+| Color | [HexValue] | Puts the LED driver in RGB mode and sets given color. |
 | led_basecolor_rgbcw |  | set PWN color using #RRGGBB[cw][ww] |
 | add_temperature | [DeltaValue][bWrapAroundInsteadOfHold] | Adds a given value to current LED temperature. Function can wrap or clamp if max/min is exceeded. |
 | led_temperature | [TempValue] | Toggles LED driver into temperature mode and sets given temperature. It using Home Assistant temperature range (in the range from 154-500 defined in homeassistant/util/color.py as HASS_COLOR_MIN and HASS_COLOR_MAX) |
@@ -79,7 +79,6 @@ Do not add anything here, as it will overwritten with next rebuild.
 | sendGet | [TargetURL] | Sends a HTTP GET request to target URL. May include GET arguments. Can be used to control devices by Tasmota HTTP protocol. Command supports argument expansion, so $CH11 changes to value of channel 11, etc, etc. |
 | power | [OnorOfforToggle] | Tasmota-style POWER command. Should work for both LEDs and relay-based devices. You can write POWER0, POWER1, etc to access specific relays. |
 | powerAll |  | set all outputs |
-| color | [HexString] | set PWN color using #RRGGBB[cw][ww]. Do not use it. Use led_basecolor_rgb |
 | backlog | [string of commands separated with ;] | run a sequence of ; separated commands |
 | exec | [Filename] | exec <file> - run autoexec.bat or other file from LFS if present |
 | SSID1 | [ValueString] | Sets the SSID of target WiFi. Command keeps Tasmota syntax. |
@@ -99,6 +98,8 @@ Do not add anything here, as it will overwritten with next rebuild.
 | lfs_test1 | [FileName] | Tests the LFS file reading feature. |
 | lfs_test2 | [FileName] | Tests the LFS file reading feature. |
 | lfs_test3 | [FileName] | Tests the LFS file reading feature. |
+| Battery_Setup | [int][int][float][int][int] | measure battery based on ADC args minbatt and maxbatt in mv. optional Vref(default 2400), ADC bits(4096) and  V_divider(2) <br/>e.g.:Battery_Setup 1500 3000 2400 4096 2 |
+| Battery_cycle | [int] | change cycle of measurement by default every 10 seconds<br/>e.g.:Battery_Setup 60 |
 | PowerSet |  | Sets current power value for calibration |
 | VoltageSet |  | Sets current V value for calibration |
 | CurrentSet |  | Sets current I value for calibration |
@@ -114,6 +115,7 @@ Do not add anything here, as it will overwritten with next rebuild.
 | BP5758D_RGBCW | [HexColor] | Don't use it. It's for direct access of BP5758D driver. You don't need it because LED driver automatically calls it, so just use led_basecolor_rgb |
 | BP5758D_Map | [Ch0][Ch1][Ch2][Ch3][Ch4] | Maps the RGBCW values to given indices of BP5758D channels. This is because BP5758D channels order is not the same for some devices. Some devices are using RGBCW order and some are using GBRCW, etc, etc. Example usage: BP5758D_Map 0 1 2 3 4 |
 | BP5758D_Current | [MaxCurrent] | Sets the maximum current limit for BP5758D driver |
+| BridgePulseLength | [FloatValue] | Setup value for bridge pulse len |
 | setButtonColor | [ButtonIndex][Color] | Sets the colour of custom scriptable HTTP page button |
 | setButtonCommand | [ButtonIndex][Command] | Sets the command of custom scriptable HTTP page button |
 | setButtonLabel | [ButtonIndex][Label] | Sets the label of custom scriptable HTTP page button |
@@ -126,17 +128,24 @@ Do not add anything here, as it will overwritten with next rebuild.
 | ntp_timeZoneOfs | [Value] | Sets the time zone offset in hours. Also supports HH:MM syntax if you want to specify value in minutes. For negative values, use -HH:MM syntax, for example -5:30 will shift time by 5 hours and 30 minutes negative. |
 | ntp_setServer | [ServerIP] | Sets the NTP server |
 | ntp_info |  | Display NTP related settings |
+| addClockEvent | [Time] [WeekDayFlags] [UniqueIDForRemoval][Command] | Schedule command to run on given time in given day of week. NTP must be running. Time is a time like HH:mm or HH:mm:ss, WeekDayFlag is a bitflag on which day to run, 0xff mean all days, 0x01 means sunday, 0x02 monday, 0x03 sunday and monday, etc, id is an unique id so event can be removede later |
+| removeClockEvent | [ID] | Removes clock event wtih given ID |
+| listClockEvents |  | Print the complete set clock events list |
+| clearClockEvents |  | Removes all set clock events |
 | toggler_enable | [1or0] | Sets the given output ON or OFF.  handles toggler_enable0, toggler_enable1, etc |
 | toggler_set | [Value] | Sets the VALUE of given output. Handles toggler_set0, toggler_set1, etc. The last digit after command name is changed to slot index. |
 | toggler_channel | [ChannelIndex] | handles toggler_channel0, toggler_channel1. Sets channel linked to given toggler slot. |
 | toggler_name |  | Handles toggler_name0, toggler_name1, etc. Sets the name of a toggler for GUI. |
 | SHT_Calibrate |  | Calibrate the SHT Sensor as Tolerance is +/-2 degrees C.<br/>e.g.:SHT_Calibrate -4 10 |
 | SHT_MeasurePer |  | Retrieve Periodical measurement for SHT<br/>e.g.:SHT_Measure |
-| SHT_LaunchPer | [msb][lsb] | Launch/Change periodical capture for SHT Sensor |
+| SHT_LaunchPer | [msb][lsb] | Launch/Change periodical capture for SHT Sensor<br/>e.g.:SHT_LaunchPer 0x23 0x22 |
 | SHT_StopPer |  | Stop periodical capture for SHT Sensor |
 | SHT_Measure |  | Retrieve OneShot measurement for SHT<br/>e.g.:SHT_Measure |
 | SHT_Heater |  | Activate or Deactivate Heater (0 / 1)<br/>e.g.:SHT_Heater 1 |
 | SHT_GetStatus |  | Get Sensor Status<br/>e.g.:SHT_GetStatusCmd |
+| SHT_ClearStatus |  | Clear Sensor Status<br/>e.g.:SHT_ClearStatusCmd |
+| SHT_ReadAlert |  | Get Sensor alert configuration<br/>e.g.:SHT_ReadAlertCmd |
+| SHT_SetAlert | [temp_high, temp_low, hum_high, hum_low]<br/>Req:all | Set Sensor alert configuration<br/>e.g.:SHT_SetAlertCmd |
 | SM16703P_Test |  | qq |
 | SM16703P_Send |  | NULL |
 | SM16703P_Test_3xZero |  | NULL |
@@ -155,7 +164,6 @@ Do not add anything here, as it will overwritten with next rebuild.
 | SetupTestPower |  | NULL |
 | tuyaMcu_testSendTime |  | Sends a example date by TuyaMCU to clock/callendar MCU |
 | tuyaMcu_sendCurTime |  | Sends a current date by TuyaMCU to clock/callendar MCU. Time is taken from NTP driver, so NTP also should be already running. |
-| tuyaMcu_fakeHex | [HexString] | Spoofs a fake hex packet so it looks like TuyaMCU send that to us. Used for testing. |
 | linkTuyaMCUOutputToChannel | [dpId][varType][channelID] | Used to map between TuyaMCU dpIDs and our internal channels. Mapping works both ways. DpIDs are per-device, you can get them by sniffing UART communication. Vartypes can also be sniffed from Tuya. VarTypes can be following: 0-raw, 1-bool, 2-value, 3-string, 4-enum, 5-bitmap |
 | tuyaMcu_setDimmerRange | [Min][Max] | Set dimmer range used by TuyaMCU |
 | tuyaMcu_sendHeartbeat |  | Send heartbeat to TuyaMCU |
@@ -169,6 +177,7 @@ Do not add anything here, as it will overwritten with next rebuild.
 | tuyaMcu_defWiFiState |  | Command sets the default WiFi state for TuyaMCU when device is not online. |
 | uartSendHex | [HexString] | Sends raw data by UART, can be used to send TuyaMCU data, but you must write whole packet with checksum yourself |
 | uartSendASCII | [AsciiString] | Sends given string by UART. |
+| uartFakeHex | [HexString] | Spoofs a fake hex packet so it looks like TuyaMCU send that to us. Used for testing. |
 | UCS1912_Test |  |  |
 | lcd_clearAndGoto |  | Clears LCD and go to pos |
 | lcd_goto |  | Go to position on LCD |
@@ -210,4 +219,4 @@ Do not add anything here, as it will overwritten with next rebuild.
 | showChannelValues |  | log channel values |
 | setButtonTimes | [ValLongPress][ValShortPress][ValRepeat] | Each value is times 100ms, so: SetButtonTimes 2 1 1 means 200ms long press, 100ms short and 100ms repeat |
 | setButtonHoldRepeat | [Value] | Sets just the hold button repeat time, given value is times 100ms, so write 1 for 100ms, 2 for 200ms, etc |
-| BridgePulseLength | [Pulse length] | Sets pulse length for BiStable relay switch operation. Value is define in 5 ms ticks |
+

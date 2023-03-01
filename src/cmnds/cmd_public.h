@@ -110,6 +110,8 @@ enum EventCode {
 
 	CMD_EVENT_TUYAMCU_PARSED, // Argument: TuyaMCU packet type
 
+	CMD_EVENT_LED_MODE, // Argument: new light mode as integer
+
 	// must be lower than 256
 	CMD_EVENT_MAX_TYPES
 };
@@ -121,6 +123,7 @@ enum EventCode {
 
 #define HASS_TEMPERATURE_MIN 154
 #define HASS_TEMPERATURE_MAX 500
+#define HASS_TEMPERATURE_CENTER ((HASS_TEMPERATURE_MAX+HASS_TEMPERATURE_MIN)/2)
 #define KELVIN_TEMPERATURE_MIN 2000
 #define KELVIN_TEMPERATURE_MAX 6500
 
@@ -139,6 +142,8 @@ enum LightMode {
 #define TOKENIZER_DONT_EXPAND					2
 // expand constants within whole command and not per-argumenet
 #define TOKENIZER_ALTERNATE_EXPAND_AT_START		4
+// force single argument mode
+#define TOKENIZER_FORCE_SINGLE_ARGUMENT_MODE	8
 
 // cmd_tokenizer.c
 int Tokenizer_GetArgsCount();
@@ -178,6 +183,7 @@ void LED_AddDimmer(int iVal, int addMode, int minValue);
 void LED_AddTemperature(int iVal, bool wrapAroundInsteadOfClamp);
 void LED_NextDimmerHold();
 void LED_NextTemperatureHold();
+void LED_NextTemperature();
 int LED_IsRunningDriver();
 float LED_GetTemperature();
 void LED_SetTemperature(int tmpInteger, bool bApply);
@@ -194,12 +200,14 @@ void LED_GetFinalRGBCW(byte* rgbcw);
 // color indices are as in Tasmota
 void LED_SetColorByIndex(int index);
 void LED_NextColor();
+void LED_NextColorTemperature();
 void LED_ToggleEnabled();
 bool LED_IsLedDriverChipRunning();
 bool LED_IsLEDRunning();
 void LED_SetEnableAll(int bEnable);
 int LED_GetEnableAll();
 void LED_GetBaseColorString(char* s);
+void LED_SetBaseColorByIndex(int i, float f, bool bApply);
 int LED_GetMode();
 float LED_GetHue();
 float LED_GetSaturation();
@@ -224,6 +232,8 @@ int CMD_InitSendCommands();
 void CMD_StartTCPCommandLine();
 // cmd_script.c
 int CMD_GetCountActiveScriptThreads();
+
+const char *CMD_GetResultString(commandResult_t r);
 
 void SVM_RunThreads(int deltaMS);
 void CMD_InitScripting();

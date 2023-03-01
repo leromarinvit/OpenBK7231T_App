@@ -27,14 +27,13 @@ Do not add anything here, as it will overwritten with next rebuild.
 | clearAllHandlers |  | This clears all added event handlers | File: cmnds/cmd_eventHandlers.c<br/>Function: CMD_ClearAllHandlers |
 | aliasMem |  | Internal usage only. See docs for 'alias' command. | File: cmnds/cmd_test.c<br/>Function: runcmd |
 | alias | [Alias][Command with spaces] | add an aliased command, so a command with spaces can be called with a short, nospaced alias | File: cmnds/cmd_test.c<br/>Function: alias |
-| echo | [Message] | Sends given message back to console. | File: cmnds/cmd_main.c<br/>Function: CMD_Echo |
+| echo | [Message] | Sends given message back to console. This command expands variables, so writing $CH12 will print value of channel 12, etc. Remember that you can also use special channel indices to access persistant flash variables and to access LED variables like dimmer, etc. | File: cmnds/cmd_main.c<br/>Function: CMD_Echo |
 | restart |  | Reboots the module | File: cmnds/cmd_main.c<br/>Function: CMD_Restart |
 | reboot |  | Same as restart. Needed for bkWriter 1.60 which sends 'reboot' cmd before trying to get bus | File: cmnds/cmd_main.c<br/>Function: CMD_Restart |
 | clearConfig |  | Clears all config, including WiFi data | File: cmnds/cmd_main.c<br/>Function: CMD_ClearConfig |
 | clearAll |  | Clears config and all remaining features, like runtime scripts, events, etc | File: cmnds/cmd_main.c<br/>Function: CMD_ClearAll |
 | DeepSleep | [Seconds] | Starts deep sleep for given amount of seconds. | File: cmnds/cmd_main.c<br/>Function: CMD_DeepSleep |
 | PowerSave | [Optional 1 or 0, by default 1 is assumed] | Enables dynamic power saving mode on BK and W600. You can also disable power saving with PowerSave 0. | File: cmnds/cmd_main.c<br/>Function: CMD_PowerSave |
-| Battery_measure | [int][int][float][int][int] | measure battery based on ADC args minbatt and maxbatt in mv. optional Vref(default 2403), ADC bits(4096) and  V_divider(2) <br/>e.g.:Battery_measure 1500 3000 2403 4096 2 | File: cmnds/cmd_main.c<br/>Function: CMD_BATT_Meas |
 | simonirtest |  | Simons Special Test | File: cmnds/cmd_main.c<br/>Function: CMD_SimonTest |
 | if | [Condition]['then'][CommandA]['else'][CommandB] | Executed a conditional. Condition should be single line. You must always use 'then' after condition. 'else' is optional. Use aliases or quotes for commands with spaces | File: cmnds/cmd_main.c<br/>Function: CMD_If |
 | ota_http | [HTTP_URL] | Starts the firmware update procedure, the argument should be a reachable HTTP server file. You can easily setup HTTP server with Xampp, or Visual Code, or Python, etc. Make sure you are using OTA file for a correct platform (getting N platform RBL on T will brick device, etc etc) | File: cmnds/cmd_main.c<br/>Function: CMD_HTTPOTA |
@@ -47,6 +46,7 @@ Do not add anything here, as it will overwritten with next rebuild.
 | add_dimmer | [Value][AddMode] | Adds a given value to current LED dimmer. AddMode 0 just adds a value (with a clamp to [0,100]), AddMode 1 will wrap around values (going under 0 goes to 100, going over 100 goes to 0), AddMode 2 will ping-pong value (going to 100 starts going back from 100 to 0, and again, going to 0 starts going up). | File: cmnds/cmd_newLEDDriver.c<br/>Function: add_dimmer |
 | led_enableAll | [1or0orToggle] | Power on/off LED but remember the RGB(CW) values | File: cmnds/cmd_newLEDDriver.c<br/>Function: enableAll |
 | led_basecolor_rgb | [HexValue] | Puts the LED driver in RGB mode and sets given color. | File: cmnds/cmd_newLEDDriver.c<br/>Function: basecolor_rgb |
+| Color | [HexValue] | Puts the LED driver in RGB mode and sets given color. | File: cmnds/cmd_newLEDDriver.c<br/>Function: basecolor_rgb |
 | led_basecolor_rgbcw |  | set PWN color using #RRGGBB[cw][ww] | File: cmnds/cmd_newLEDDriver.c<br/>Function: basecolor_rgbcw |
 | add_temperature | [DeltaValue][bWrapAroundInsteadOfHold] | Adds a given value to current LED temperature. Function can wrap or clamp if max/min is exceeded. | File: cmnds/cmd_newLEDDriver.c<br/>Function: add_temperature |
 | led_temperature | [TempValue] | Toggles LED driver into temperature mode and sets given temperature. It using Home Assistant temperature range (in the range from 154-500 defined in homeassistant/util/color.py as HASS_COLOR_MIN and HASS_COLOR_MAX) | File: cmnds/cmd_newLEDDriver.c<br/>Function: temperature |
@@ -79,7 +79,6 @@ Do not add anything here, as it will overwritten with next rebuild.
 | sendGet | [TargetURL] | Sends a HTTP GET request to target URL. May include GET arguments. Can be used to control devices by Tasmota HTTP protocol. Command supports argument expansion, so $CH11 changes to value of channel 11, etc, etc. | File: cmnds/cmd_send.c<br/>Function: CMD_SendGET |
 | power | [OnorOfforToggle] | Tasmota-style POWER command. Should work for both LEDs and relay-based devices. You can write POWER0, POWER1, etc to access specific relays. | File: cmnds/cmd_tasmota.c<br/>Function: power |
 | powerAll |  | set all outputs | File: cmnds/cmd_tasmota.c<br/>Function: powerAll |
-| color | [HexString] | set PWN color using #RRGGBB[cw][ww]. Do not use it. Use led_basecolor_rgb | File: cmnds/cmd_tasmota.c<br/>Function: color |
 | backlog | [string of commands separated with ;] | run a sequence of ; separated commands | File: cmnds/cmd_tasmota.c<br/>Function: cmnd_backlog |
 | exec | [Filename] | exec <file> - run autoexec.bat or other file from LFS if present | File: cmnds/cmd_tasmota.c<br/>Function: cmnd_lfsexec |
 | SSID1 | [ValueString] | Sets the SSID of target WiFi. Command keeps Tasmota syntax. | File: cmnds/cmd_tasmota.c<br/>Function: cmnd_SSID1 |
@@ -99,6 +98,8 @@ Do not add anything here, as it will overwritten with next rebuild.
 | lfs_test1 | [FileName] | Tests the LFS file reading feature. | File: cmnds/cmd_tasmota.c<br/>Function: cmnd_lfs_test1 |
 | lfs_test2 | [FileName] | Tests the LFS file reading feature. | File: cmnds/cmd_tasmota.c<br/>Function: cmnd_lfs_test2 |
 | lfs_test3 | [FileName] | Tests the LFS file reading feature. | File: cmnds/cmd_tasmota.c<br/>Function: cmnd_lfs_test3 |
+| Battery_Setup | [int][int][float][int][int] | measure battery based on ADC args minbatt and maxbatt in mv. optional Vref(default 2400), ADC bits(4096) and  V_divider(2) <br/>e.g.:Battery_Setup 1500 3000 2400 4096 2 | File: drv/drv_battery.c<br/>Function: Battery_Setup |
+| Battery_cycle | [int] | change cycle of measurement by default every 10 seconds<br/>e.g.:Battery_Setup 60 | File: drv/drv_battery.c<br/>Function: Battery_cycle |
 | PowerSet |  | Sets current power value for calibration | File: driver/drv_bl0937.c<br/>Function: BL0937_PowerSet |
 | VoltageSet |  | Sets current V value for calibration | File: driver/drv_bl0937.c<br/>Function: BL0937_VoltageSet |
 | CurrentSet |  | Sets current I value for calibration | File: driver/drv_bl0937.c<br/>Function: BL0937_CurrentSet |
@@ -114,6 +115,7 @@ Do not add anything here, as it will overwritten with next rebuild.
 | BP5758D_RGBCW | [HexColor] | Don't use it. It's for direct access of BP5758D driver. You don't need it because LED driver automatically calls it, so just use led_basecolor_rgb | File: driver/drv_bp5758d.c<br/>Function: BP5758D_RGBCW |
 | BP5758D_Map | [Ch0][Ch1][Ch2][Ch3][Ch4] | Maps the RGBCW values to given indices of BP5758D channels. This is because BP5758D channels order is not the same for some devices. Some devices are using RGBCW order and some are using GBRCW, etc, etc. Example usage: BP5758D_Map 0 1 2 3 4 | File: driver/drv_bp5758d.c<br/>Function: BP5758D_Map |
 | BP5758D_Current | [MaxCurrent] | Sets the maximum current limit for BP5758D driver | File: driver/drv_bp5758d.c<br/>Function: BP5758D_Current |
+| BridgePulseLength | [FloatValue] | Setup value for bridge pulse len | File: driver/drv_bridge_driver.c<br/>Function: Bridge_Pulse_length |
 | setButtonColor | [ButtonIndex][Color] | Sets the colour of custom scriptable HTTP page button | File: driver/drv_httpButtons.c<br/>Function: CMD_setButtonColor |
 | setButtonCommand | [ButtonIndex][Command] | Sets the command of custom scriptable HTTP page button | File: driver/drv_httpButtons.c<br/>Function: CMD_setButtonCommand |
 | setButtonLabel | [ButtonIndex][Label] | Sets the label of custom scriptable HTTP page button | File: driver/drv_httpButtons.c<br/>Function: CMD_setButtonLabel |
@@ -126,17 +128,24 @@ Do not add anything here, as it will overwritten with next rebuild.
 | ntp_timeZoneOfs | [Value] | Sets the time zone offset in hours. Also supports HH:MM syntax if you want to specify value in minutes. For negative values, use -HH:MM syntax, for example -5:30 will shift time by 5 hours and 30 minutes negative. | File: driver/drv_ntp.c<br/>Function: NTP_SetTimeZoneOfs |
 | ntp_setServer | [ServerIP] | Sets the NTP server | File: driver/drv_ntp.c<br/>Function: NTP_SetServer |
 | ntp_info |  | Display NTP related settings | File: driver/drv_ntp.c<br/>Function: NTP_Info |
+| addClockEvent | [Time] [WeekDayFlags] [UniqueIDForRemoval][Command] | Schedule command to run on given time in given day of week. NTP must be running. Time is a time like HH:mm or HH:mm:ss, WeekDayFlag is a bitflag on which day to run, 0xff mean all days, 0x01 means sunday, 0x02 monday, 0x03 sunday and monday, etc, id is an unique id so event can be removede later | File: driver/drv_ntp_events.c<br/>Function: CMD_NTP_AddClockEvent |
+| removeClockEvent | [ID] | Removes clock event wtih given ID | File: driver/drv_ntp_events.c<br/>Function: CMD_NTP_RemoveClockEvent |
+| listClockEvents |  | Print the complete set clock events list | File: driver/drv_ntp_events.c<br/>Function: CMD_NTP_ListEvents |
+| clearClockEvents |  | Removes all set clock events | File: driver/drv_ntp_events.c<br/>Function: CMD_NTP_ClearEvents |
 | toggler_enable | [1or0] | Sets the given output ON or OFF.  handles toggler_enable0, toggler_enable1, etc | File: driver/drv_pwmToggler.c<br/>Function: Toggler_EnableX |
 | toggler_set | [Value] | Sets the VALUE of given output. Handles toggler_set0, toggler_set1, etc. The last digit after command name is changed to slot index. | File: driver/drv_pwmToggler.c<br/>Function: Toggler_SetX |
 | toggler_channel | [ChannelIndex] | handles toggler_channel0, toggler_channel1. Sets channel linked to given toggler slot. | File: driver/drv_pwmToggler.c<br/>Function: Toggler_ChannelX |
 | toggler_name |  | Handles toggler_name0, toggler_name1, etc. Sets the name of a toggler for GUI. | File: driver/drv_pwmToggler.c<br/>Function: Toggler_NameX |
 | SHT_Calibrate |  | Calibrate the SHT Sensor as Tolerance is +/-2 degrees C.<br/>e.g.:SHT_Calibrate -4 10 | File: driver/drv_sht3x.c<br/>Function: SHT3X_Calibrate |
 | SHT_MeasurePer |  | Retrieve Periodical measurement for SHT<br/>e.g.:SHT_Measure | File: driver/drv_sht3x.c<br/>Function: SHT3X_MeasurePer |
-| SHT_LaunchPer | [msb][lsb] | Launch/Change periodical capture for SHT Sensor | File: driver/drv_sht3x.c<br/>Function: SHT3X_ChangePer |
+| SHT_LaunchPer | [msb][lsb] | Launch/Change periodical capture for SHT Sensor<br/>e.g.:SHT_LaunchPer 0x23 0x22 | File: driver/drv_sht3x.c<br/>Function: SHT3X_ChangePer |
 | SHT_StopPer |  | Stop periodical capture for SHT Sensor | File: driver/drv_sht3x.c<br/>Function: SHT3X_StopPerCmd |
 | SHT_Measure |  | Retrieve OneShot measurement for SHT<br/>e.g.:SHT_Measure | File: driver/drv_sht3x.c<br/>Function: SHT3X_Measure |
 | SHT_Heater |  | Activate or Deactivate Heater (0 / 1)<br/>e.g.:SHT_Heater 1 | File: driver/drv_sht3x.c<br/>Function: SHT3X_Heater |
 | SHT_GetStatus |  | Get Sensor Status<br/>e.g.:SHT_GetStatusCmd | File: driver/drv_sht3x.c<br/>Function: SHT3X_GetStatus |
+| SHT_ClearStatus |  | Clear Sensor Status<br/>e.g.:SHT_ClearStatusCmd | File: driver/drv_sht3x.c<br/>Function: SHT3X_ClearStatus |
+| SHT_ReadAlert |  | Get Sensor alert configuration<br/>e.g.:SHT_ReadAlertCmd | File: driver/drv_sht3x.c<br/>Function: SHT3X_ReadAlertcmd |
+| SHT_SetAlert | [temp_high, temp_low, hum_high, hum_low]<br/>Req:all | Set Sensor alert configuration<br/>e.g.:SHT_SetAlertCmd | File: driver/drv_sht3x.c<br/>Function: SHT3X_SetAlertcmd |
 | SM16703P_Test |  | qq | File: driver/drv_ucs1912.c<br/>Function: SM16703P_Test |
 | SM16703P_Send |  | NULL | File: driver/drv_sm16703P.c<br/>Function: SM16703P_Send_Cmd |
 | SM16703P_Test_3xZero |  | NULL | File: driver/drv_sm16703P.c<br/>Function: SM16703P_Test_3xZero |
@@ -155,7 +164,6 @@ Do not add anything here, as it will overwritten with next rebuild.
 | SetupTestPower |  | NULL | File: driver/drv_test_drivers.c<br/>Function: TestPower_Setup |
 | tuyaMcu_testSendTime |  | Sends a example date by TuyaMCU to clock/callendar MCU | File: driver/drv_tuyaMCU.c<br/>Function: TuyaMCU_Send_SetTime_Example |
 | tuyaMcu_sendCurTime |  | Sends a current date by TuyaMCU to clock/callendar MCU. Time is taken from NTP driver, so NTP also should be already running. | File: driver/drv_tuyaMCU.c<br/>Function: TuyaMCU_Send_SetTime_Current |
-| tuyaMcu_fakeHex | [HexString] | Spoofs a fake hex packet so it looks like TuyaMCU send that to us. Used for testing. | File: driver/drv_tuyaMCU.c<br/>Function: TuyaMCU_Fake_Hex |
 | linkTuyaMCUOutputToChannel | [dpId][varType][channelID] | Used to map between TuyaMCU dpIDs and our internal channels. Mapping works both ways. DpIDs are per-device, you can get them by sniffing UART communication. Vartypes can also be sniffed from Tuya. VarTypes can be following: 0-raw, 1-bool, 2-value, 3-string, 4-enum, 5-bitmap | File: driver/drv_tuyaMCU.c<br/>Function: TuyaMCU_LinkTuyaMCUOutputToChannel |
 | tuyaMcu_setDimmerRange | [Min][Max] | Set dimmer range used by TuyaMCU | File: driver/drv_tuyaMCU.c<br/>Function: TuyaMCU_SetDimmerRange |
 | tuyaMcu_sendHeartbeat |  | Send heartbeat to TuyaMCU | File: driver/drv_tuyaMCU.c<br/>Function: TuyaMCU_SendHeartbeat |
@@ -169,6 +177,7 @@ Do not add anything here, as it will overwritten with next rebuild.
 | tuyaMcu_defWiFiState |  | Command sets the default WiFi state for TuyaMCU when device is not online. | File: driver/drv_tuyaMCU.c<br/>Function: Cmd_TuyaMCU_Send_RSSI |
 | uartSendHex | [HexString] | Sends raw data by UART, can be used to send TuyaMCU data, but you must write whole packet with checksum yourself | File: driver/drv_tuyaMCU.c<br/>Function: CMD_UART_Send_Hex |
 | uartSendASCII | [AsciiString] | Sends given string by UART. | File: driver/drv_uart.c<br/>Function: CMD_UART_Send_ASCII |
+| uartFakeHex | [HexString] | Spoofs a fake hex packet so it looks like TuyaMCU send that to us. Used for testing. | File: driver/drv_uart.c<br/>Function: CMD_UART_FakeHex |
 | UCS1912_Test |  |  | File: driver/drv_ucs1912.c<br/>Function: UCS1912_Test |
 | lcd_clearAndGoto |  | Clears LCD and go to pos | File: i2c/drv_i2c_lcd_pcf8574t.c<br/>Function: DRV_I2C_LCD_PCF8574_ClearAndGoTo |
 | lcd_goto |  | Go to position on LCD | File: i2c/drv_i2c_lcd_pcf8574t.c<br/>Function: DRV_I2C_LCD_PCF8574_GoTo |

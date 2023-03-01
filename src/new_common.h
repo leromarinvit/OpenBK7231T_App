@@ -389,6 +389,7 @@ void Main_ScheduleHomeAssistantDiscovery(int seconds);
 int Main_IsConnectedToWiFi();
 int Main_IsOpenAccessPointMode();
 void Main_Init();
+bool Main_HasFastConnect();
 void Main_OnEverySecond();
 int Main_HasMQTTConnected();
 int Main_HasWiFiConnected();
@@ -408,8 +409,9 @@ int LWIP_GetActiveSockets();
 //delay function do 10*r nops, because rtos_delay_milliseconds is too much
 void usleep(int r);
 
-// linear mapping function --> https://www.arduino.cc/reference/en/language/functions/math/map/
+#define RESTARTS_REQUIRED_FOR_SAFE_MODE 4
 
+// linear mapping function --> https://www.arduino.cc/reference/en/language/functions/math/map/
 #define MAP(x, in_min, in_max, out_min, out_max) (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 
 typedef enum lcdPrintType_e {
@@ -430,9 +432,10 @@ typedef enum
 WIFI_RSSI_LEVEL wifi_rssi_scale(int8_t rssi_value);
 extern const char *str_rssi[];
 extern int bSafeMode;
+extern int g_bWantPinDeepSleep;
 extern int g_timeSinceLastPingReply;
 extern int g_startPingWatchDogAfter;
-
+extern int g_openAP;
 
 typedef int(*jsonCb_t)(void *userData, const char *fmt, ...);
 int JSON_ProcessCommandReply(const char *cmd, const char *args, void *request, jsonCb_t printer, int flags);

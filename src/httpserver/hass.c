@@ -4,6 +4,7 @@
 #include "../logging/logging.h"
 #include "../hal/hal_wifi.h"
 #include "../driver/drv_public.h"
+#include "../new_pins.h"
 
 /*
 Abbreviated node names - https://www.home-assistant.io/docs/mqtt/discovery/
@@ -29,10 +30,10 @@ void hass_populate_unique_id(ENTITY_TYPE type, int index, char* uniq_id) {
 	const char* longDeviceName = CFG_GetDeviceName();
 
 	switch (type) {
+	case LIGHT_ON_OFF:
 	case LIGHT_PWM:
 		sprintf(uniq_id, "%s_%s_%d", longDeviceName, "light", index);
 		break;
-
 	case LIGHT_PWMCW:
 	case LIGHT_RGB:
 	case LIGHT_RGBCW:
@@ -57,6 +58,12 @@ void hass_populate_unique_id(ENTITY_TYPE type, int index, char* uniq_id) {
 	case HUMIDITY_SENSOR:
 		sprintf(uniq_id, "%s_%s_%d", longDeviceName, "humidity", index);
 		break;
+	case BATTERY_SENSOR:
+		sprintf(uniq_id, "%s_%s_%d", longDeviceName, "battery", index);
+		break;
+	case BATTERY_VOLTAGE_SENSOR:
+		sprintf(uniq_id, "%s_%s_%d", longDeviceName, "voltage", index);
+		break;
 	}
 }
 
@@ -77,6 +84,7 @@ void hass_print_unique_id(http_request_t* request, const char* fmt, ENTITY_TYPE 
 /// @param info Device info
 void hass_populate_device_config_channel(ENTITY_TYPE type, char* uniq_id, HassDeviceInfo* info) {
 	switch (type) {
+	case LIGHT_ON_OFF:
 	case LIGHT_PWM:
 	case LIGHT_PWMCW:
 	case LIGHT_RGB:
@@ -89,6 +97,8 @@ void hass_populate_device_config_channel(ENTITY_TYPE type, char* uniq_id, HassDe
 		break;
 
 	case POWER_SENSOR:
+	case BATTERY_SENSOR:
+	case BATTERY_VOLTAGE_SENSOR:
 	case TEMPERATURE_SENSOR:
 	case HUMIDITY_SENSOR:
 		sprintf(info->channel, "sensor/%s/config", uniq_id);
@@ -145,6 +155,7 @@ HassDeviceInfo* hass_init_device_info(ENTITY_TYPE type, int index, char* payload
 
 	//Build the `name`
 	switch (type) {
+	case LIGHT_ON_OFF:
 	case LIGHT_PWM:
 	case RELAY:
 	case BINARY_SENSOR:
@@ -175,10 +186,29 @@ HassDeviceInfo* hass_init_device_info(ENTITY_TYPE type, int index, char* payload
 		isSensor = true;
 		sprintf(g_hassBuffer, "%s Humidity", CFG_GetShortDeviceName());
 		break;
+	case BATTERY_SENSOR:
+		isSensor = true;
+		sprintf(g_hassBuffer, "%s Battery", CFG_GetShortDeviceName());
+		break;
+	case BATTERY_VOLTAGE_SENSOR:
+		isSensor = true;
+		sprintf(g_hassBuffer, "%s Voltage", CFG_GetShortDeviceName());
+		break;
 	}
 	cJSON_AddStringToObject(info->root, "name", g_hassBuffer);
 	cJSON_AddStringToObject(info->root, "~", CFG_GetMQTTClientId());      //base topic
-	cJSON_AddStringToObject(info->root, "avty_t", "~/connected");   //availability_topic, `online` value is broadcasted
+	// remove availability information for sensor to keep last value visible on Home Assistant
+	bool flagavty = false;
+	flagavty = CFG_HasFlag(OBK_FLAG_NOT_PUBLISH_AVAILABILITY_SENSOR);
+	// if door sensor is running, then deep sleep will be invoked mostly, then we dont want availability
+#ifndef OBK_DISABLE_ALL_DRIVERS
+	if (DRV_IsRunning("DoorSensor") == false)
+#endif
+	{
+		if (!isSensor || !flagavty) {
+			cJSON_AddStringToObject(info->root, "avty_t", "~/connected");   //availability_topic, `online` value is broadcasted
+		}
+	}
 
 	if (!isSensor) {	//Sensors (except binary_sensor) don't use payload 
 		cJSON_AddStringToObject(info->root, "pl_on", payload_on);    //payload_on
@@ -195,8 +225,8 @@ HassDeviceInfo* hass_init_device_info(ENTITY_TYPE type, int index, char* payload
 /// @brief Initializes HomeAssistant relay device discovery storage.
 /// @param index
 /// @return 
-HassDeviceInfo* hass_init_relay_device_info(int index) {
-	HassDeviceInfo* info = hass_init_device_info(RELAY, index, "1", "0");
+HassDeviceInfo* hass_init_relay_device_info(int index, ENTITY_TYPE type) {
+	HassDeviceInfo* info = hass_init_device_info(type, index, "1", "0");
 
 	sprintf(g_hassBuffer, "~/%i/get", index);
 	cJSON_AddStringToObject(info->root, STATE_TOPIC_KEY, g_hassBuffer);   //state_topic
@@ -229,6 +259,7 @@ HassDeviceInfo* hass_init_light_device_info(ENTITY_TYPE type) {
 		cJSON_AddStringToObject(info->root, "rgb_cmd_t", g_hassBuffer);  //rgb_command_topic
 		break;
 
+	case LIGHT_ON_OFF:
 	case LIGHT_PWM:
 		brightness_scale = 100;
 		break;
@@ -335,18 +366,31 @@ HassDeviceInfo* hass_init_sensor_device_info(ENTITY_TYPE type, int channel) {
 		//https://www.home-assistant.io/integrations/sensor.mqtt/ refers to value_template (val_tpl)
 		//{{ float(value)*0.1 }} for value=12 give 1.2000000000000002, using round() to limit the decimal places
 		cJSON_AddStringToObject(info->root, "val_tpl", "{{ float(value)*0.1|round(2) }}");
+		sprintf(g_hassBuffer, "~/%d/get", channel);
+		cJSON_AddStringToObject(info->root, STATE_TOPIC_KEY, g_hassBuffer);
 		break;
 	case HUMIDITY_SENSOR:
 		cJSON_AddStringToObject(info->root, "dev_cla", "humidity");
 		cJSON_AddStringToObject(info->root, "unit_of_meas", "%");
+		sprintf(g_hassBuffer, "~/%d/get", channel);
+		cJSON_AddStringToObject(info->root, STATE_TOPIC_KEY, g_hassBuffer);
+		break;
+	case BATTERY_SENSOR:
+		cJSON_AddStringToObject(info->root, "dev_cla", "battery");
+		cJSON_AddStringToObject(info->root, "unit_of_meas", "%");
+		cJSON_AddStringToObject(info->root, STATE_TOPIC_KEY, "~/battery/get");
+		break;
+	case BATTERY_VOLTAGE_SENSOR:
+		cJSON_AddStringToObject(info->root, "dev_cla", "voltage");
+		cJSON_AddStringToObject(info->root, "unit_of_meas", "mV");
+		cJSON_AddStringToObject(info->root, STATE_TOPIC_KEY, "~/voltage/get");
 		break;
 
 	default:
+		sprintf(g_hassBuffer, "~/%d/get", channel);
+		cJSON_AddStringToObject(info->root, STATE_TOPIC_KEY, g_hassBuffer);
 		return NULL;
 	}
-
-	sprintf(g_hassBuffer, "~/%d/get", channel);
-	cJSON_AddStringToObject(info->root, STATE_TOPIC_KEY, g_hassBuffer);
 
 	cJSON_AddStringToObject(info->root, "stat_cla", "measurement");
 	return info;

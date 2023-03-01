@@ -647,6 +647,22 @@ void SET_LightMode(int newMode) {
 			GetLightModeStr(g_lightMode),
 			GetLightModeStr(newMode));
 		g_lightMode = newMode;
+		EventHandlers_FireEvent(CMD_EVENT_LED_MODE, newMode);
+	}
+}
+void LED_SetBaseColorByIndex(int i, float f, bool bApply) {
+	if (i < 0 || i >= 5)
+		return;
+	baseColors[i] = f;
+	if (bApply) {
+		if (CFG_HasFlag(OBK_FLAG_LED_AUTOENABLE_ON_ANY_ACTION)) {
+			LED_SetEnableAll(true);
+		}
+
+		// set g_lightMode
+		SET_LightMode(Light_RGB);
+		sendColorChange();
+		apply_smart_light();
 	}
 }
 OBK_Publish_Result LED_SendCurrentLightMode() {
@@ -889,6 +905,20 @@ void LED_AddDimmer(int iVal, int addMode, int minValue) {
 }
 void LED_NextTemperatureHold() {
 	LED_AddTemperature(25, true);
+}
+void LED_NextTemperature() {
+	if (g_lightMode != Light_Temperature) {
+		LED_SetTemperature(HASS_TEMPERATURE_MIN, true);
+		return;
+	}
+	if (led_temperature_current == HASS_TEMPERATURE_MIN) {
+		LED_SetTemperature(HASS_TEMPERATURE_CENTER, true);
+	} else if (led_temperature_current == HASS_TEMPERATURE_CENTER) {
+		LED_SetTemperature(HASS_TEMPERATURE_MAX, true);
+	}
+	else {
+		LED_SetTemperature(HASS_TEMPERATURE_MIN, true);
+	}
 }
 void LED_NextDimmerHold() {
 	// dimmer hold will use some kind of min value,
@@ -1378,6 +1408,11 @@ void NewLED_InitCommands(){
 	//cmddetail:"fn":"basecolor_rgb","file":"cmnds/cmd_newLEDDriver.c","requires":"",
 	//cmddetail:"examples":""}
     CMD_RegisterCommand("led_basecolor_rgb", basecolor_rgb, NULL);
+	//cmddetail:{"name":"Color","args":"[HexValue]",
+	//cmddetail:"descr":"Puts the LED driver in RGB mode and sets given color.",
+	//cmddetail:"fn":"basecolor_rgb","file":"cmnds/cmd_newLEDDriver.c","requires":"",
+	//cmddetail:"examples":""}
+	CMD_RegisterCommand("Color", basecolor_rgb, NULL);
 	//cmddetail:{"name":"led_basecolor_rgbcw","args":"",
 	//cmddetail:"descr":"set PWN color using #RRGGBB[cw][ww]",
 	//cmddetail:"fn":"basecolor_rgbcw","file":"cmnds/cmd_newLEDDriver.c","requires":"",

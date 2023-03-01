@@ -137,6 +137,66 @@ void Test_Commands_Channels() {
 	SELFTEST_ASSERT_CHANNEL(19, 1191);
 	SELFTEST_ASSERT_CHANNEL(20, 4);
 
+	CMD_ExecuteCommand("setChannelType 0 temperature", 0);
+	SELFTEST_ASSERT_CHANNELTYPE(0, ChType_Temperature);
+	CMD_ExecuteCommand("setChannelType 1 humidity", 0);
+	SELFTEST_ASSERT_CHANNELTYPE(1, ChType_Humidity);
+	CMD_ExecuteCommand("setChannelType 2 Dimmer1000", 0);
+	SELFTEST_ASSERT_CHANNELTYPE(2, ChType_Dimmer1000);
+	CMD_ExecuteCommand("setChannelType 3 BatteryLevelPercent", 0);
+	SELFTEST_ASSERT_CHANNELTYPE(3, ChType_BatteryLevelPercent);
+	CMD_ExecuteCommand("setChannelType 4 Current_div1000", 0);
+	SELFTEST_ASSERT_CHANNELTYPE(4, ChType_Current_div1000);
+	CMD_ExecuteCommand("setChannelType 5 OpenClosed", 0);
+	SELFTEST_ASSERT_CHANNELTYPE(5, ChType_OpenClosed);
+	CMD_ExecuteCommand("setChannelType 6 EnergyTotal_kWh_div100", 0);
+	SELFTEST_ASSERT_CHANNELTYPE(6, ChType_EnergyTotal_kWh_div100);
+	CMD_ExecuteCommand("setChannelType 7 OpenClosed_Inv", 0);
+	SELFTEST_ASSERT_CHANNELTYPE(7, ChType_OpenClosed_Inv);
+
+	// Map command
+	/*
+// linear mapping function --> https://www.arduino.cc/reference/en/language/functions/math/map/
+#define MAP(x, in_min, in_max, out_min, out_max) (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+	*/
+	// target is channel 0
+	CMD_ExecuteCommand("Map 0 5 0 10 0 100", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 50);
+	CMD_ExecuteCommand("Map 0 7 0 10 0 100", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 70);
+	CMD_ExecuteCommand("Map 0 10 0 10 0 100", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 100);
+
+	CMD_ExecuteCommand("Map 0 5 0 10 1000 2000", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 1500);
+	CMD_ExecuteCommand("Map 0 7 0 10 1000 2000", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 1700);
+	CMD_ExecuteCommand("Map 0 10 0 10 1000 2000", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 2000);
+	CMD_ExecuteCommand("Map 0 9 0 10 1000 2000", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 1900);
+	CMD_ExecuteCommand("Map 0 9.5 0 10 1000 2000", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 1950);
+	// is it able to take channel values?
+	CMD_ExecuteCommand("setChannel 2 0", 0);
+	CMD_ExecuteCommand("setChannel 3 10", 0);
+	CMD_ExecuteCommand("setChannel 4 1000", 0);
+	CMD_ExecuteCommand("setChannel 5 2000", 0);
+	CMD_ExecuteCommand("Map 0 9 $CH2 $CH3 $CH4 $CH5", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 1900);
+	CMD_ExecuteCommand("Map 0 8 $CH2 $CH3 $CH4 $CH5", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 1800);
+	CMD_ExecuteCommand("Map 0 8.5 $CH2 $CH3 $CH4 $CH5", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 1850);
+	CMD_ExecuteCommand("setChannel 6 6", 0);
+	CMD_ExecuteCommand("Map 0 $CH6 $CH2 $CH3 $CH4 $CH5", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 1600);
+	CMD_ExecuteCommand("setChannel 6 5", 0);
+	CMD_ExecuteCommand("Map 0 $CH6 $CH2 $CH3 $CH4 $CH5", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 1500);
+	CMD_ExecuteCommand("setChannel 6 4", 0);
+	CMD_ExecuteCommand("Map 0 $CH6 $CH2 $CH3 $CH4 $CH5", 0);
+	SELFTEST_ASSERT_CHANNEL(0, 1400);
 }
 
 
