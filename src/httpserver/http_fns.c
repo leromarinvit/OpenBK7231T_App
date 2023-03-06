@@ -446,16 +446,28 @@ int http_fn_index(http_request_t* request) {
 			poststr(request, "</td></tr>");
 
 		}
-		else if (channelType == ChType_OffLowMidHigh || channelType == ChType_OffLowestLowMidHighHighest || channelType == ChType_LowestLowMidHighHighest) {
+		else if (channelType == ChType_OffLowMidHigh || channelType == ChType_OffLowestLowMidHighHighest 
+			|| channelType == ChType_LowestLowMidHighHighest || channelType == ChType_LowMidHighHighest
+			|| channelType == ChType_OffLowMidHighHighest) {
 			const char** types;
 			const char* types4[] = { "Off","Low","Mid","High" };
+			const char* typesLowMidHighHighest[] = { "Low","Mid","High","Highest" };
+			const char* typesOffLowMidHighHighest[] = { "Off", "Low","Mid","High","Highest" };
 			const char* types6[] = { "Off", "Lowest", "Low", "Mid", "High", "Highest" };
 			const char* types5NoOff[] = { "Lowest", "Low", "Mid", "High", "Highest" };
 			int numTypes;
-
+			
 			if (channelType == ChType_OffLowMidHigh) {
 				types = types4;
 				numTypes = 4;
+			}
+			else if (channelType == ChType_LowMidHighHighest) {
+				types = typesLowMidHighHighest;
+				numTypes = 4;
+			}
+			else if (channelType == ChType_OffLowMidHighHighest) {
+				types = typesOffLowMidHighHighest;
+				numTypes = 5;
 			}
 			else if (channelType == ChType_LowestLowMidHighHighest) {
 				types = types5NoOff;
@@ -2219,6 +2231,8 @@ int http_fn_cfg_pins(http_request_t* request) {
 	poststr(request, NULL);
 	return 0;
 }
+
+
 const char* g_obk_flagNames[] = {
 	"[MQTT] Broadcast led params together (send dimmer and color when dimmer or color changes, topic name: YourDevName/led_basecolor_rgb/get, YourDevName/led_dimmer/get)",
 	"[MQTT] Broadcast led final color (topic name: YourDevName/led_finalcolor_rgb/get)",
@@ -2246,13 +2260,9 @@ const char* g_obk_flagNames[] = {
 	"[LED] Automatically enable Light on any change of brightness, color or temperature",
 	"[LED] Emulate Cool White with RGB in device with four PWMS - Red is 0, Green 1, Blue 2, and Warm is 4",
 	"[POWER] Allow negative current/power for power measurement (all chips, BL0937, BL0942, etc)",
-#if PLATFORM_BL602
-	"[UART] Use alternate UART for BL0942, CSE, TuyaMCU, etc. If marked, uses /dev/ttyS1, otherwise S0",
-#elif PLATFORM_BEKEN
-	"[UART] Use alternate UART for BL0942, CSE, TuyaMCU, etc. If marked, uses UART2, otherwise UART1",
-#else
+	// On BL602, if marked, uses /dev/ttyS1, otherwise S0
+	// On Beken, if marked, uses UART2, otherwise UART1
 	"[UART] Use alternate UART for BL0942, CSE, TuyaMCU, etc",
-#endif
 	"[HASS] Invoke HomeAssistant discovery on change to ip address, configuration",
 	"[LED] Setting RGB white (FFFFFF) enables temperature mode",
 	"[NETIF] Use short device name as a hostname instead of a long name",

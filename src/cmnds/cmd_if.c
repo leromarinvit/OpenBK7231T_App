@@ -146,6 +146,171 @@ const char *strCompareBound(const char *s, const char *templ, const char *stoppe
 }
 char *g_expDebugBuffer = 0;
 #define EXPRESSION_DEBUG_BUFFER_SIZE 128
+typedef struct {
+	const char *constantName;
+	float(*getValue)(const char *s);
+} constant_t;
+
+float getMQTTOn(const char *s) {
+	return Main_HasMQTTConnected();
+}
+
+float getChannelValue(const char *s) {
+	int idx = atoi(s + 3);
+	return CHANNEL_Get(idx);
+}
+
+float getLedDimmer(const char *s) {
+	return LED_GetDimmer();
+}
+
+float getLedEnableAll(const char *s) {
+	return LED_GetEnableAll();
+}
+
+float getLedHue(const char *s) {
+	return LED_GetHue();
+}
+
+float getLedRed(const char *s) {
+	return LED_GetRed255();
+}
+
+float getLedGreen(const char *s) {
+	return LED_GetGreen255();
+}
+
+float getLedBlue(const char *s) {
+	return LED_GetBlue255();
+}
+
+float getLedSaturation(const char *s) {
+	return LED_GetSaturation();
+}
+
+float getLedTemperature(const char *s) {
+	return LED_GetTemperature();
+}
+
+float getActiveRepeatingEvents(const char *s) {
+	return RepeatingEvents_GetActiveCount();
+}
+
+#ifndef OBK_DISABLE_ALL_DRIVERS
+
+float getVoltage(const char *s) {
+	return DRV_GetReading(OBK_VOLTAGE);
+}
+
+float getCurrent(const char *s) {
+	return DRV_GetReading(OBK_CURRENT);
+}
+
+float getPower(const char *s) {
+	return DRV_GetReading(OBK_POWER);
+}
+
+#endif
+
+float getUpTime(const char *s) {
+	return Time_getUpTimeSeconds();
+}
+
+const constant_t g_constants[] = {
+	//cnstdetail:{"name":"MQTTOn",
+	//cnstdetail:"title":"MQTTOn",
+	//cnstdetail:"descr":"Legacy variable, without $ prefix. Returns 1 if MQTT is connected, otherwise 0.",
+	//cnstdetail:"requires":""}
+	{"MQTTOn", &getMQTTOn},
+	//cnstdetail:{"name":"$MQTTOn",
+	//cnstdetail:"title":"$MQTTOn",
+	//cnstdetail:"descr":"Returns 1 if MQTT is connected, otherwise 0.",
+	//cnstdetail:"requires":""}
+	{"$MQTTOn", &getMQTTOn},
+	//cnstdetail:{"name":"$CH***",
+	//cnstdetail:"title":"$CH***",
+	//cnstdetail:"descr":"Provides channel access, so you can do math expressions on channel values. $CH1 is channel 1, $CH20 is channel 20, $CH140 is channel 140, etc",
+	//cnstdetail:"requires":""}
+	{"$CH***", &getChannelValue},
+	//cnstdetail:{"name":"$CH**",
+	//cnstdetail:"title":"$CH**",
+	//cnstdetail:"descr":"Provides channel access, as above.",
+	//cnstdetail:"requires":""}
+	{"$CH**", &getChannelValue},
+	//cnstdetail:{"name":"$CH*",
+	//cnstdetail:"title":"$CH*",
+	//cnstdetail:"descr":"Provides channel access, as above.",
+	//cnstdetail:"requires":""}
+	{"$CH*", &getChannelValue},
+	//cnstdetail:{"name":"$led_dimmer",
+	//cnstdetail:"title":"$led_dimmer",
+	//cnstdetail:"descr":"Current value of LED dimmer, 0-100 range",
+	//cnstdetail:"requires":""}
+	{"$led_dimmer", &getLedDimmer},
+	//cnstdetail:{"name":"$led_enableAll",
+	//cnstdetail:"title":"$led_enableAll",
+	//cnstdetail:"descr":"Returns 1 if LED is enabled, otherwise 0.",
+	//cnstdetail:"requires":""}
+	{"$led_enableAll", &getLedEnableAll},
+	//cnstdetail:{"name":"$led_hue",
+	//cnstdetail:"title":"$led_hue",
+	//cnstdetail:"descr":"Current LED Hue value",
+	//cnstdetail:"requires":""}
+	{"$led_hue", &getLedHue},
+	//cnstdetail:{"name":"$led_red",
+	//cnstdetail:"title":"$led_red",
+	//cnstdetail:"descr":"Current LED red value",
+	//cnstdetail:"requires":""}
+	{"$led_red", &getLedRed},
+	//cnstdetail:{"name":"$led_green",
+	//cnstdetail:"title":"$led_green",
+	//cnstdetail:"descr":"Current LED green value",
+	//cnstdetail:"requires":""}
+	{"$led_green", &getLedGreen},
+	//cnstdetail:{"name":"$led_blue",
+	//cnstdetail:"title":"$led_blue",
+	//cnstdetail:"descr":"Current LED blue value",
+	//cnstdetail:"requires":""}
+	{"$led_blue", &getLedBlue},
+	//cnstdetail:{"name":"$led_saturation",
+	//cnstdetail:"title":"$led_saturation",
+	//cnstdetail:"descr":"Current LED saturation value",
+	//cnstdetail:"requires":""}
+	{"$led_saturation", &getLedSaturation},
+	//cnstdetail:{"name":"$led_temperature",
+	//cnstdetail:"title":"$led_temperature",
+	//cnstdetail:"descr":"Current LED temperature value",
+	//cnstdetail:"requires":""}
+	{"$led_temperature", &getLedTemperature},
+	//cnstdetail:{"name":"$activeRepeatingEvents",
+	//cnstdetail:"title":"$activeRepeatingEvents",
+	//cnstdetail:"descr":"Current number of active repeating events",
+	//cnstdetail:"requires":""}
+	{"$activeRepeatingEvents", &getActiveRepeatingEvents},
+#ifndef OBK_DISABLE_ALL_DRIVERS
+	//cnstdetail:{"name":"$voltage",
+	//cnstdetail:"title":"$voltage",
+	//cnstdetail:"descr":"Current value of voltage from energy metering chip. You can use those variables to make, for example, a change handler that fires when voltage is above 245, etc.",
+	//cnstdetail:"requires":""}
+	{"$voltage", &getVoltage},
+	//cnstdetail:{"name":"$current",
+	//cnstdetail:"title":"$current",
+	//cnstdetail:"descr":"Current value of current from energy metering chip",
+	//cnstdetail:"requires":""}
+	{"$current", &getCurrent},
+	//cnstdetail:{"name":"$power",
+	//cnstdetail:"title":"$power",
+	//cnstdetail:"descr":"Current value of power from energy metering chip",
+	//cnstdetail:"requires":""}
+	{"$power", &getPower},
+#endif
+	//cnstdetail:{"name":"$uptime",
+	//cnstdetail:"title":"$uptime",
+	//cnstdetail:"descr":"Time since reboot in seconds",
+	//cnstdetail:"requires":""}
+	{"$uptime", &getUpTime},
+};
+static int g_totalConstants = sizeof(g_constants) / sizeof(g_constants[0]);
 
 // tries to expand a given string into a constant
 // So, for $CH1 it will set out to given channel value
@@ -154,112 +319,18 @@ char *g_expDebugBuffer = 0;
 // Returns true if constant matches
 // Returns false if no constants found
 const char *CMD_ExpandConstant(const char *s, const char *stop, float *out) {
-	int idx;
-	const char *ret;
-
-	ret = strCompareBound(s, "MQTTOn", stop, false);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: MQTTOn");
-		*out = Main_HasMQTTConnected();
-		return ret;
+	const constant_t *var;
+	int i;
+	var = g_constants;
+	for (i = 0; i < g_totalConstants; i++, var++) {
+		bool bAllowWildCard = strstr(var->constantName, "*");
+		const char *ret = strCompareBound(s, var->constantName, stop, bAllowWildCard);
+		if (ret) {
+			*out = var->getValue(s);
+			ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: %s", var->name);
+			return ret;
+		}
 	}
-	ret = strCompareBound(s, "$CH***", stop, 1);
-	if (ret) {
-		idx = atoi(s + 3);
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: channel value of idx %i", idx);
-		*out = CHANNEL_Get(idx);
-		return ret;
-	}
-	ret = strCompareBound(s, "$CH**", stop, 1);
-	if (ret) {
-		idx = atoi(s + 3);
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: channel value of idx %i", idx);
-		*out = CHANNEL_Get(idx);
-		return ret;
-	}
-	ret = strCompareBound(s, "$CH*", stop, 1);
-	if (ret) {
-		idx = atoi(s + 3);
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: channel value of idx %i", idx);
-		*out = CHANNEL_Get(idx);
-		return ret;
-	}
-	ret = strCompareBound(s, "$led_dimmer", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: led_dimmer");
-		*out = LED_GetDimmer();
-		return ret;
-	}
-	ret = strCompareBound(s, "$led_enableAll", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: led_enableAll");
-		*out = LED_GetEnableAll();
-		return ret;
-	}
-	ret = strCompareBound(s, "$led_hue", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: led_hue");
-		*out = LED_GetHue();
-		return ret;
-	}
-	ret = strCompareBound(s, "$led_red", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: led_red");
-		*out = LED_GetRed255();
-		return ret;
-	}
-	ret = strCompareBound(s, "$led_green", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: $led_green");
-		*out = LED_GetGreen255();
-		return ret;
-	}
-	ret = strCompareBound(s, "$led_blue", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: $led_blue");
-		*out = LED_GetBlue255();
-		return ret;
-	}
-	ret = strCompareBound(s, "$led_saturation", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: led_saturation");
-		*out = LED_GetSaturation();
-		return ret;
-	}
-	ret = strCompareBound(s, "$led_temperature", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: led_temperature");
-		*out = LED_GetTemperature();
-		return ret;
-	}
-	ret = strCompareBound(s, "$activeRepeatingEvents", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: activeRepeatingEvents");
-		*out = RepeatingEvents_GetActiveCount();
-		return ret;
-	}
-#ifndef OBK_DISABLE_ALL_DRIVERS
-	ret = strCompareBound(s, "$voltage", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: voltage");
-		*out = DRV_GetReading(OBK_VOLTAGE);
-		return ret;
-	}
-	ret = strCompareBound(s, "$current", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: $current");
-		*out = DRV_GetReading(OBK_CURRENT);
-		return ret;
-	}
-	ret = strCompareBound(s, "$power", stop, 0);
-	if (ret) {
-		ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstant: $power");
-		*out = DRV_GetReading(OBK_POWER);
-		return ret;
-	}
-#endif
-
-	
 	return false;
 }
 #if WINDOWS

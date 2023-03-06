@@ -503,7 +503,9 @@ void Main_OnEverySecond()
 	}
 
 #ifdef OBK_MCU_SLEEP_METRICS_ENABLE
-	Main_LogPowerSave();
+	if (g_powersave && CFG_HasLoggerFlag(LOGGER_FLAG_POWER_SAVE)) {
+		Main_LogPowerSave();
+	}
 #endif
 
 
@@ -959,6 +961,11 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 			if (PIN_FindPinIndexForRole(IOR_BAT_ADC, -1) != -1) {
 #ifndef OBK_DISABLE_ALL_DRIVERS
 				DRV_StartDriver("Battery");
+#endif
+			}
+			if (PIN_FindPinIndexForRole(IOR_TM1637_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_TM1637_DIO, -1) != -1) {
+#ifndef OBK_DISABLE_ALL_DRIVERS
+				DRV_StartDriver("TM1637");
 #endif
 			}
 		}

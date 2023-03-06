@@ -218,7 +218,7 @@ static commandResult_t CMD_Map(const void *context, const char *cmd, const char 
 	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 6)) {
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
-	//cmddetail:{"name":"Map","args":"[TargetChannel][InputValue][InMin][InMax][OutMin][OutMax]"
+	// [TargetChannel][InputValue][InMin][InMax][OutMin][OutMax]
 	targetChannel = Tokenizer_GetArgInteger(0);
 	input = Tokenizer_GetArgFloat(1);
 	in_min = Tokenizer_GetArgFloat(2);
@@ -414,7 +414,7 @@ void CMD_InitChannelCommands(){
 	//cmddetail:"fn":"CMD_SetPinRole","file":"cmnds/cmd_channels.c","requires":"",
 	//cmddetail:"examples":""}
     CMD_RegisterCommand("SetPinRole", CMD_SetPinRole, NULL);
-	//cmddetail:{"name":"SetPinChannel","args":"[PinRole][ChannelIndex]",
+	//cmddetail:{"name":"SetPinChannel","args":"[PinIndex][ChannelIndex]",
 	//cmddetail:"descr":"This allows you to set a channel linked to pin from console. Usually it's easier to do this through WWW panel, so you don't have to use this command.",
 	//cmddetail:"fn":"CMD_SetPinChannel","file":"cmnds/cmd_channels.c","requires":"",
 	//cmddetail:"examples":""}
